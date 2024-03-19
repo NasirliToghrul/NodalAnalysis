@@ -2,28 +2,32 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Nov 13 20:31:08 2021
-
 @author: Toghrul Nasirli
 """
 
 import numpy as np
 
+# Sutton's correlation for critical pressure
 def critical_presssure_Sutton(sg_gas):
     Ppc = 756.8 - 131*sg_gas - 3.6*(sg_gas**2)
     return Ppc
 
+# Sutton's correlation for critical temperature
 def critical_temperature_Sutton(sg_gas):
     Tpc = 169.2 + 349*sg_gas - 74*(sg_gas**2)
     return Tpc
 
+# Carr-Kobayashi method for temperature correction
 def carr_kobayashi_temperature(sg_gas, CO2, H2S, N2):
     temperature_corrected = critical_temperature_Sutton(sg_gas) - (80*CO2) + (130*H2S) - (250*N2)
     return temperature_corrected
 
+# Carr-Kobayashi method for pressure correction
 def carr_kobayashi_pressure(sg_gas, CO2, H2S, N2):
     pressure_corrected = critical_presssure_Sutton(sg_gas) + (440*CO2) + (600*H2S) - (170*N2)
     return pressure_corrected
 
+# Wichert-Aziz method for temperature correction
 def wichert_aziz_temperature(sg_gas, CO2, H2S):
     A = CO2 + H2S
     B = H2S
@@ -31,6 +35,7 @@ def wichert_aziz_temperature(sg_gas, CO2, H2S):
     tpc_corrected = critical_temperature_Sutton(sg_gas) - epsilon
     return tpc_corrected
 
+# Wichert-Aziz method for pressure correction
 def wichert_aziz_pressure(sg_gas, CO2, H2S):
     A = CO2 + H2S
     B = H2S
@@ -38,7 +43,8 @@ def wichert_aziz_pressure(sg_gas, CO2, H2S):
     pressure_corrected = (critical_presssure_Sutton(sg_gas)*wichert_aziz_temperature(sg_gas, CO2, H2S))/(critical_temperature_Sutton(sg_gas) + H2S*(1-H2S)*epsilon)
     return pressure_corrected
 
-def redlich_kwong_eos(P, T, sg_gas, CO2, H2S, method, N2):#INSERT T AS FAHRENHEIT
+# Redlich-Kwong equation of state for gas density calculation
+def redlich_kwong_eos(P, T, sg_gas, CO2, H2S, method, N2): # T in Fahrenheit
     R = 10.73
     if method == "WichertAziz":
         a = (0.42727*(R**2)*(wichert_aziz_temperature(sg_gas, CO2, H2S)**2.5))/(wichert_aziz_pressure(sg_gas, CO2, H2S))
@@ -54,13 +60,12 @@ def redlich_kwong_eos(P, T, sg_gas, CO2, H2S, method, N2):#INSERT T AS FAHRENHEI
             solution = i
     return solution.real
 
-
-def lee_gonzales_eakin(P,T,sg_gas,CO2,H2S,method, N2):#INSERT T AS FAHRENHEIT
-    molecular_weight = sg_gas*29
-    density = P*molecular_weight/(redlich_kwong_eos(P,T,sg_gas,CO2,H2S,method,N2)*10.73*(T+460))
-    X = 3.5 + (986/(T+460)) + 0.01*molecular_weight
-    Y = 2.4 - 0.2*X
-    K = (9.4+0.02*molecular_weight)*((T+460)**1.5)*(10**-4)/(209 + 19*molecular_weight + (T+460))
-    viscosity = K*np.exp(X*((density/62.4)**Y))
+# Lee-Gonzales-Eakin method for viscosity calculation
+def lee_gonzales_eakin(P, T, sg_gas, CO2, H2S, method, N2): # T in Fahrenheit
+    molecular_weight = sg_gas * 29
+    density = P * molecular_weight / (redlich_kwong_eos(P, T, sg_gas, CO2, H2S, method, N2) * 10.73 * (T+460))
+    X = 3.5 + (986 / (T + 460)) + 0.01 * molecular_weight
+    Y = 2.4 - 0.2 * X
+    K = (9.4 + 0.02 * molecular_weight) * ((T + 460) ** 1.5) * (10 ** -4) / (209 + 19 * molecular_weight + (T + 460))
+    viscosity = K * np.exp(X * ((density / 62.4) ** Y))
     return viscosity
-
